@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import prisma from "../db/db.config.js";
+import AuthMiddleware from "../middleware/auth.middlware.js";
 import { handleCatchError, handleTryResponseHandler } from "../utils/helper.js";
 import {
   loginSchemaValidation,
@@ -94,6 +95,30 @@ AuthRouter.post("/login", async (req, res) => {
       "Account login Success",
       responsePayload
     );
+  } catch (error) {
+    return handleCatchError(error, res);
+  }
+});
+
+AuthRouter.get("/user", AuthMiddleware, async (req, res) => {
+  try {
+    const userCheck = req.user;
+
+    const user = await prisma.user.findUnique({
+      where: {
+        email: userCheck.email,
+      },
+    });
+
+    if (!user) {
+      return handleTryResponseHandler(res, 400, "Unauthorized Access");
+    }
+
+    const payload = {
+      ...user,
+    };
+
+    return handleTryResponseHandler(res, 200, "User Information", payload);
   } catch (error) {
     return handleCatchError(error, res);
   }
