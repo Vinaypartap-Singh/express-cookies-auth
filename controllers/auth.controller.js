@@ -2,8 +2,10 @@ import bcrypt from "bcryptjs";
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import passport from "passport";
+import { uploadOnCloudinary } from "../config/cloudinary.js";
 import prisma from "../db/db.config.js";
 import AuthMiddleware from "../middleware/auth.middlware.js";
+import { upload } from "../middleware/multer.middleware.js";
 import { handleCatchError, handleTryResponseHandler } from "../utils/helper.js";
 import {
   loginSchemaValidation,
@@ -160,3 +162,52 @@ AuthRouter.get(
 );
 
 export default AuthRouter;
+
+AuthRouter.post(
+  "/profile",
+  AuthMiddleware,
+  upload.single("profileImage"),
+  async (req, res) => {
+    try {
+      const user_id = req.user.id;
+
+      if (!user_id) {
+        return handleTryResponseHandler(res, 400, "UnAuthorized Access");
+      }
+
+      if (!req.file) {
+        return handleTryResponseHandler(res, 400, "No Image File Uploaded");
+      }
+
+      const profileImageLocalPath = req.file.path;
+
+      const profileImage = await uploadOnCloudinary(profileImageLocalPath);
+
+      if (!profileImage) {
+        return handleTryResponseHandler("Unable to load image to cloudinary.");
+      }
+
+      await prisma.user.update({
+        where: {
+          id: user_id,
+        },
+        data: {
+          profileImage: profileImage.url,
+        },
+      });
+
+      const imageUrl = {
+        profileImage: profileImage.urxl,
+      };
+
+      return handleTryResponseHandler(
+        res,
+        200,
+        "Profile Image Uploaded Successfully",
+        imageUrl
+      );
+    } catch (error) {
+      return handleCatchError(error, res);
+    }
+  }
+);
