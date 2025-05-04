@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { Router } from "express";
 import jwt from "jsonwebtoken";
+import passport from "passport";
 import prisma from "../db/db.config.js";
 import AuthMiddleware from "../middleware/auth.middlware.js";
 import { handleCatchError, handleTryResponseHandler } from "../utils/helper.js";
@@ -76,7 +77,7 @@ AuthRouter.post("/login", async (req, res) => {
     };
 
     const token = jwt.sign(jwtPayload, process.env.JWT_SECRET, {
-      expiresIn: "3d",
+      expiresIn: "1d",
     });
 
     const responsePayload = {
@@ -86,7 +87,7 @@ AuthRouter.post("/login", async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      maxAge: 3 * 24 * 60 * 60 * 1000,
+      maxAge: 1 * 24 * 60 * 60 * 1000,
     });
 
     return handleTryResponseHandler(
@@ -123,5 +124,39 @@ AuthRouter.get("/user", AuthMiddleware, async (req, res) => {
     return handleCatchError(error, res);
   }
 });
+
+AuthRouter.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+AuthRouter.get(
+  "/google/callback",
+  passport.authenticate("google", { failureRedirect: "/api/auth/login" }),
+  function (req, res) {
+    const user = req.user;
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "3d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
+    });
+
+    res.json({
+      message: "Account Logged In Successfully",
+    });
+
+    res.redirect("/");
+  }
+);
 
 export default AuthRouter;
