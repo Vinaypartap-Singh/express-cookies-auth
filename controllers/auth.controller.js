@@ -197,7 +197,7 @@ AuthRouter.post(
       });
 
       const imageUrl = {
-        profileImage: profileImage.urxl,
+        profileImage: profileImage.url,
       };
 
       return handleTryResponseHandler(
