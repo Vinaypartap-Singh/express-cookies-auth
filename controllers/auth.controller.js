@@ -153,11 +153,7 @@ AuthRouter.get(
       maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
     });
 
-    res.json({
-      message: "Account Logged In Successfully",
-    });
-
-    res.redirect("/");
+    return res.redirect("/");
   }
 );
 
